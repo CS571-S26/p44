@@ -7,7 +7,7 @@ export default function AboutPage() {
       <Card className='m-4 p-2'>
         <Card.Body className='text-center'>
           <h2>About</h2> 
-          <p>Example declarative routing with react-router-dom.</p>
+          <p>More Coming Soon!</p>
         </Card.Body>
       </Card>
     </div>
