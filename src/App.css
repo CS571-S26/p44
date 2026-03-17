@@ -1,5 +1,14 @@
-h2 {
-  font-family: "Bitcount Grid Single Ink";
+.card h2 {
+  font-family: "Bitcount", sans-serif;
   font-weight: 400;
-  color: white;
+  color: white !important;
+}
+
+body {
+  background-color: black; /* Using a color name */
+  color: white; /* Optional: sets text color to white for readability on a black background */
+}
+
+.card {
+  background-color: gray;
 }

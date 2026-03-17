@@ -5,7 +5,7 @@ export default function AboutPage() {
   return (
     <div className="w-100 h-100 d-flex justify-content-center align-items-center">
       <Card className='m-4 p-2'>
-        <Card.Body className='text-center'>
+        <Card.Body className= "text-center card">
           <h2>About</h2> 
           <p>More Coming Soon!</p>
         </Card.Body>
