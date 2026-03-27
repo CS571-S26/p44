@@ -1,7 +1,6 @@
-.card h2 {
-  font-family: "Bitcount", sans-serif;
+h1, h2, h3, .navbar-brand, .nav-link {
+  font-family: "Share Tech Mono", sans-serif;
   font-weight: 400;
-  color: white !important;
 }
 
 body {
@@ -445,4 +444,31 @@ body {
 .toggle-btn:hover:not(.active) {
   background-color: #1a1a1a;
   color: white;
+}
+
+.signals-sub-header {
+  font-size: 0.75rem;
+  color: #adb5bd;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  margin-top: 1rem;
+}
+
+.watchlist-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.watchlist-icon {
+  color: #adb5bd;
+  font-size: 0.85rem;
+}
+
+.watchlist-icon-active {
+  color: #22c55e;
+  font-size: 0.85rem;
 }

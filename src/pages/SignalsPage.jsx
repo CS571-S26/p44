@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { supabase } from '../supabase.js'
 import '../App.css'
+import SignalTable from '../components/SignalTable.jsx'
 
 export default function SignalsPage() {
   const [validDates, setValidDates] = useState([])
@@ -40,14 +41,20 @@ export default function SignalsPage() {
     setLoading(true)
     const dateStr = date.toISOString().split('T')[0]
     const { data } = await supabase
-      .from('signals')
-      .select('ticker, relative_strength, rank, signals_in_lookback')
+      .from('signals_with_trades')
+      .select('*')
       .eq('last_date', dateStr)
-      .eq('has_signal_today', true)
       .order(sortBy === 'rank' ? 'rank' : 'relative_strength', { ascending: sortBy === 'rank' })
 
     setSignalsByDate({ [dateStr]: data ?? [] })
     setLoading(false)
+  }
+
+  function sortSignals(signals) {
+    if (sortBy === 'pnl') {
+      return [...signals].sort((a, b) => (b.win_loss ?? -999) - (a.win_loss ?? -999))
+    }
+    return signals
   }
 
   async function fetchLast10() {
@@ -58,10 +65,9 @@ export default function SignalsPage() {
     const result = {}
     for (const dateStr of dateStrs) {
       const { data } = await supabase
-        .from('signals')
-        .select('ticker, relative_strength, rank, signals_in_lookback')
+        .from('signals_with_trades')
+        .select('*')
         .eq('last_date', dateStr)
-        .eq('has_signal_today', true)
         .order(sortBy === 'rank' ? 'rank' : 'relative_strength', { ascending: sortBy === 'rank' })
 
       result[dateStr] = data ?? []
@@ -69,6 +75,13 @@ export default function SignalsPage() {
 
     setSignalsByDate(result)
     setLoading(false)
+  }
+
+  function isOpen(exitDate) {
+    if (!exitDate) return true
+    const today = new Date()
+    const exit = new Date(exitDate)
+    return exit > today
   }
 
   return (
@@ -92,7 +105,7 @@ export default function SignalsPage() {
             onChange={e => setSortBy(e.target.value)}
           >
             <option value="rank">Sort by Rank</option>
-            <option value="relative_strength">Sort by RS</option>
+            <option value="pnl">Sort by P&L</option>
           </select>
           <div className="view-toggle">
             <button
@@ -120,26 +133,7 @@ export default function SignalsPage() {
             {signals.length === 0 ? (
               <p className="text-secondary">No signals for this date.</p>
             ) : (
-              <table className="w-100 signals-table">
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>Ticker</th>
-                    <th>Relative Strength</th>
-                    <th>Signals in Lookback</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {signals.map(s => (
-                    <tr key={s.ticker}>
-                      <td className="text-secondary">#{s.rank}</td>
-                      <td className="ticker-cell">{s.ticker}</td>
-                      <td className="rs-cell">{s.relative_strength?.toFixed(2)}</td>
-                      <td className="text-secondary">{s.signals_in_lookback}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <SignalTable signals={signals} isOpen={isOpen} sortSignals={sortSignals} />
             )}
           </div>
         ))
