@@ -1,11 +1,13 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import '../App.css'
+import WelcomeModal from './WelcomeModal.jsx'
 
 export default function Layout() {
   const location = useLocation()
 
   return (
     <div>
+      <WelcomeModal />
       <nav className="navbar navbar-dark bg-dark main-nav">
         <Link to="/" className="navbar-brand fw-bold">SwingTrade</Link>
         <div className="d-flex gap-4">
