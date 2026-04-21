@@ -15,6 +15,7 @@ export default function SignalsPage() {
 
   useEffect(() => {
     fetchDates()
+    document.title = 'SwingTrade | Signals'
   }, [])
 
   useEffect(() => {
@@ -41,20 +42,13 @@ export default function SignalsPage() {
     setLoading(true)
     const dateStr = date.toISOString().split('T')[0]
     const { data } = await supabase
-      .from('signals_with_trades')
+      .from('signals')
       .select('*')
       .eq('last_date', dateStr)
       .order(sortBy === 'rank' ? 'rank' : 'relative_strength', { ascending: sortBy === 'rank' })
 
     setSignalsByDate({ [dateStr]: data ?? [] })
     setLoading(false)
-  }
-
-  function sortSignals(signals) {
-    if (sortBy === 'pnl') {
-      return [...signals].sort((a, b) => (b.win_loss ?? -999) - (a.win_loss ?? -999))
-    }
-    return signals
   }
 
   async function fetchLast10() {
@@ -65,7 +59,7 @@ export default function SignalsPage() {
     const result = {}
     for (const dateStr of dateStrs) {
       const { data } = await supabase
-        .from('signals_with_trades')
+        .from('signals')
         .select('*')
         .eq('last_date', dateStr)
         .order(sortBy === 'rank' ? 'rank' : 'relative_strength', { ascending: sortBy === 'rank' })
@@ -77,11 +71,11 @@ export default function SignalsPage() {
     setLoading(false)
   }
 
-  function isOpen(exitDate) {
-    if (!exitDate) return true
-    const today = new Date()
-    const exit = new Date(exitDate)
-    return exit > today
+  function sortSignals(signals) {
+    if (sortBy === 'pnl') {
+      return [...signals].sort((a, b) => (b.win_loss ?? -999) - (a.win_loss ?? -999))
+    }
+    return signals
   }
 
   return (
@@ -130,11 +124,7 @@ export default function SignalsPage() {
         Object.entries(signalsByDate).map(([date, signals]) => (
           <div key={date} className="mb-5">
             <div className="signals-date-header">{date}</div>
-            {signals.length === 0 ? (
-              <p className="text-secondary">No signals for this date.</p>
-            ) : (
-              <SignalTable signals={signals} isOpen={isOpen} sortSignals={sortSignals} />
-            )}
+            <SignalTable signals={signals} sortSignals={sortSignals} />
           </div>
         ))
       )}

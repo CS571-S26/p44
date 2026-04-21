@@ -1,7 +1,11 @@
 import '../App.css'
 import { FaUser, FaChartLine, FaChartBar, FaCode, FaLinkedin, FaGithub, FaPython, FaReact, FaDatabase, FaDiscord } from 'react-icons/fa'
+import { useEffect } from 'react'
 
 export default function AboutPage() {
+  useEffect(() => {
+      document.title = 'SwingTrade | About'
+    }, [])
   return (
     <div className="about-container">
       <h1 className="mb-4">About</h1>
