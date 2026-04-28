@@ -36,7 +36,10 @@ export default function Layout() {
     <div>
       <WelcomeModal />
       <nav className="navbar navbar-dark bg-dark main-nav">
-        <Link to="/" className="navbar-brand fw-bold">SwingTrade</Link>
+        <Link to="/" className="navbar-brand fw-bold d-flex align-items-center gap-2">
+          <img src="/p44/chart2.svg" alt="SwingTrade logo" style={{ width: '24px', height: '24px' }} />
+          SwingTrade
+        </Link>
 
         <div className="d-flex gap-4 position-relative" ref={navRef}>
 

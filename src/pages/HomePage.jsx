@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Card } from 'react-bootstrap'
 import { supabase } from '../supabase.js'
-import SignalTable from '../components/SignalTable.jsx'
+import WatchlistButton from '../components/WatchlistButton.jsx'
 import '../App.css'
 
 function DashStatCard({ label, value, sub, highlight }) {
@@ -26,6 +25,17 @@ function DashStatCard({ label, value, sub, highlight }) {
   )
 }
 
+// Returns the next market open date after a given YYYY-MM-DD string
+function nextMarketOpen(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setDate(d.getDate() + 1)
+  // Skip weekends
+  while (d.getDay() === 0 || d.getDay() === 6) {
+    d.setDate(d.getDate() + 1)
+  }
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 export default function HomePage() {
   const [stats, setStats] = useState({
     totalSignals: null,
@@ -39,9 +49,11 @@ export default function HomePage() {
     avgPLAll: null,
   })
 
-  const [signals, setSignals] = useState([])
-  const [rsFilter, setRsFilter] = useState('all')
-  const [sortBy, setSortBy] = useState('rank')
+  const [latestSignals, setLatestSignals] = useState([])
+  const [latestDate, setLatestDate] = useState(null)
+  const [prevSignals, setPrevSignals] = useState([])
+  const [prevDate, setPrevDate] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchStats()
@@ -66,19 +78,15 @@ export default function HomePage() {
 
     const lastScanDate = latestRow?.[0]?.last_date ?? null
 
-    // All signals for the day — no RS filter
-    const { count: todaySignals } = await supabase
+    const { count: todayCount } = await supabase
       .from('signals')
       .select('*', { count: 'exact', head: true })
       .eq('last_date', lastScanDate)
       .eq('has_signal_today', true)
 
     const avgSignalsPerDay =
-      totalDaysScanned > 0
-        ? (totalSignals / totalDaysScanned).toFixed(1)
-        : 0
+      totalDaysScanned > 0 ? (totalSignals / totalDaysScanned).toFixed(1) : 0
 
-    // RS > 50 closed signals
     const { data: closedRS50 } = await supabase
       .from('signals')
       .select('win_loss')
@@ -87,37 +95,28 @@ export default function HomePage() {
 
     const rs50     = closedRS50 ?? []
     const winsRS50 = rs50.filter(s => (s.win_loss ?? 0) > 0).length
-    const winRateRS50 =
-      rs50.length > 0
-        ? ((winsRS50 / rs50.length) * 100).toFixed(0) + '%'
-        : 'N/A'
+    const winRateRS50 = rs50.length > 0
+      ? ((winsRS50 / rs50.length) * 100).toFixed(0) + '%' : 'N/A'
     const sumPLRS50 = rs50.reduce((acc, s) => acc + (s.win_loss ?? 0), 0)
-    const avgPLRS50 =
-      rs50.length > 0
-        ? (sumPLRS50 >= 0 ? '+' : '') + ((sumPLRS50 / rs50.length) * 100).toFixed(2) + '%'
-        : 'N/A'
+    const avgPLRS50 = rs50.length > 0
+      ? (sumPLRS50 >= 0 ? '+' : '') + ((sumPLRS50 / rs50.length) * 100).toFixed(2) + '%' : 'N/A'
 
-    // Unfiltered closed signals
     const { data: closedAll } = await supabase
       .from('signals')
       .select('win_loss')
       .eq('status', 'closed')
 
-    const all      = closedAll ?? []
-    const winsAll  = all.filter(s => (s.win_loss ?? 0) > 0).length
-    const winRateAll =
-      all.length > 0
-        ? ((winsAll / all.length) * 100).toFixed(0) + '%'
-        : 'N/A'
+    const all     = closedAll ?? []
+    const winsAll = all.filter(s => (s.win_loss ?? 0) > 0).length
+    const winRateAll = all.length > 0
+      ? ((winsAll / all.length) * 100).toFixed(0) + '%' : 'N/A'
     const sumPLAll = all.reduce((acc, s) => acc + (s.win_loss ?? 0), 0)
-    const avgPLAll =
-      all.length > 0
-        ? (sumPLAll >= 0 ? '+' : '') + ((sumPLAll / all.length) * 100).toFixed(2) + '%'
-        : 'N/A'
+    const avgPLAll = all.length > 0
+      ? (sumPLAll >= 0 ? '+' : '') + ((sumPLAll / all.length) * 100).toFixed(2) + '%' : 'N/A'
 
     setStats({
       totalSignals,
-      todaySignals,
+      todaySignals: todayCount,
       lastScanDate,
       totalDaysScanned,
       avgSignalsPerDay,
@@ -129,44 +128,56 @@ export default function HomePage() {
   }
 
   async function fetchSignals() {
-    const { data: latestRow } = await supabase
+    setLoading(true)
+
+    const { data: dateRows } = await supabase
       .from('signals')
       .select('last_date')
       .order('last_date', { ascending: false })
-      .limit(1)
+      .limit(100)
 
-    const latestDate = latestRow?.[0]?.last_date
-    if (!latestDate) return
+    const uniqueDates = [...new Set(dateRows?.map(r => r.last_date) ?? [])]
+    const d0 = uniqueDates[0] ?? null
+    const d1 = uniqueDates[1] ?? null
 
-    const { data } = await supabase
-      .from('signals')
-      .select('*')
-      .eq('last_date', latestDate)
-      .order('rank', { ascending: true })
+    if (d0) {
+      const { data } = await supabase
+        .from('signals')
+        .select('ticker, relative_strength, rank')
+        .eq('last_date', d0)
+        .eq('has_signal_today', true)
+        .order('rank', { ascending: true })
 
-    setSignals(data ?? [])
+      setLatestSignals(data ?? [])
+      setLatestDate(d0)
+    }
+
+    if (d1) {
+      const { data } = await supabase
+        .from('signals')
+        .select('ticker, relative_strength, rank, buy_price, current_price')
+        .eq('last_date', d1)
+        .eq('has_signal_today', true)
+        .order('rank', { ascending: true })
+
+      setPrevSignals(data ?? [])
+      setPrevDate(d1)
+    }
+
+    setLoading(false)
   }
 
   function timeSince(dateStr) {
     if (!dateStr) return ''
-    const days = Math.floor((new Date() - new Date(dateStr)) / 86400000)
+    const days = Math.floor((new Date() - new Date(dateStr + 'T12:00:00')) / 86400000)
     if (days === 0) return 'today'
     if (days === 1) return '1 day ago'
     return `${days} days ago`
   }
 
-  function sortSignals(sigs) {
-    const filtered = sigs.filter(s => {
-      if (rsFilter === '25') return (s.relative_strength ?? 0) > 25
-      if (rsFilter === '50') return (s.relative_strength ?? 0) > 50
-      if (rsFilter === '75') return (s.relative_strength ?? 0) > 75
-      return true
-    })
-
-    if (sortBy === 'pnl') {
-      return [...filtered].sort((a, b) => (b.win_loss ?? -999) - (a.win_loss ?? -999))
-    }
-    return [...filtered].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
+  function pnl(buy, current) {
+    if (buy == null || current == null) return null
+    return (current - buy) / buy
   }
 
   return (
@@ -234,73 +245,111 @@ export default function HomePage() {
         />
       </div>
 
-      {/* ── Signal table card ── */}
-      <Card className="stat-card">
-        <Card.Body className="p-0">
+      {/* ── Two-panel signals row ── */}
+      {loading ? (
+        <p className="text-secondary">Loading...</p>
+      ) : (
+        <div className="row g-3 align-items-start">
 
-          {/* Card header */}
-          <div className="d-flex justify-content-between align-items-center px-4 pt-4 pb-3">
-            <div className="d-flex align-items-baseline gap-2">
-              <span style={{ fontWeight: 500, color: '#2c3a2c', fontSize: '0.95rem' }}>
-                Latest signals
-              </span>
-              <span className="last-scanned-text">{stats.lastScanDate ?? '...'}</span>
-            </div>
-
-            <div className="d-flex align-items-center gap-2">
-              <span style={{ fontSize: '0.75rem', color: '#7a8a78' }}>Sort by</span>
-              <div className="view-toggle">
-                <button
-                  className={`toggle-btn ${sortBy === 'rank' ? 'active' : ''}`}
-                  onClick={() => setSortBy('rank')}
-                >
-                  Rank
-                </button>
-                <button
-                  className={`toggle-btn ${sortBy === 'pnl' ? 'active' : ''}`}
-                  onClick={() => setSortBy('pnl')}
-                >
-                  P&amp;L
-                </button>
+          {/* ── Left: Buy at Open ── */}
+          <div className="col-12 col-md-4">
+            <div className="stat-card h-100">
+              <div className="mb-3">
+                <span style={{ fontWeight: 500, color: '#2c3a2c', fontSize: '0.95rem' }}>
+                  {latestDate ? `Buy ${nextMarketOpen(latestDate)} at Open` : 'Latest Signals'}
+                </span>
+                <div className="last-scanned-text" style={{ fontSize: '0.75rem', marginTop: '2px' }}>
+                  {latestDate ?? '...'}
+                </div>
               </div>
+
+              {latestSignals.length === 0 ? (
+                <p className="text-secondary" style={{ fontSize: '0.85rem' }}>No signals from the latest scan.</p>
+              ) : (
+                <table className="w-100 signals-table">
+                  <thead>
+                    <tr>
+                      <th>Ticker</th>
+                      <th>RS</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {latestSignals.map(s => (
+                      <tr key={s.ticker}>
+                        <td className="ticker-cell">{s.ticker}</td>
+                        <td className="rs-cell">{s.relative_strength?.toFixed(1)}</td>
+                        <td><WatchlistButton ticker={s.ticker} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
 
-          {/* RS filter pills */}
-          <div className="d-flex align-items-center gap-2 px-4 pb-3">
-            <span style={{ fontSize: '0.75rem', color: '#7a8a78' }}>RS filter</span>
-            {[
-              { key: 'all', label: 'All RS'  },
-              { key: '25',  label: 'RS > 25' },
-              { key: '50',  label: 'RS > 50' },
-              { key: '75',  label: 'RS > 75' },
-            ].map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setRsFilter(key)}
-                className="btn btn-sm rounded-pill"
-                style={{
-                  background: rsFilter === key ? '#4a7c59' : 'transparent',
-                  color: rsFilter === key ? '#fff' : '#7a8a78',
-                  border: '1px solid',
-                  borderColor: rsFilter === key ? '#4a7c59' : '#dde0db',
-                  fontSize: '0.75rem',
-                  padding: '2px 12px',
-                  fontWeight: rsFilter === key ? 600 : 400,
-                }}
-              >
-                {label}
-              </button>
-            ))}
+          {/* ── Right: In Play ── */}
+          <div className="col-12 col-md-8">
+            <div className="stat-card h-100">
+              <div className="mb-3">
+                <span style={{ fontWeight: 500, color: '#2c3a2c', fontSize: '0.95rem' }}>
+                  In Play
+                </span>
+                <div className="last-scanned-text" style={{ fontSize: '0.75rem', marginTop: '2px' }}>
+                  {prevDate ?? '...'}
+                </div>
+              </div>
+
+              {prevSignals.length === 0 ? (
+                <p className="text-secondary" style={{ fontSize: '0.85rem' }}>No signals from the previous scan.</p>
+              ) : (
+                <table className="w-100 signals-table">
+                  <thead>
+                    <tr>
+                      <th>Ticker</th>
+                      <th>RS</th>
+                      <th>Buy Price</th>
+                      <th>Current</th>
+                      <th>P&amp;L</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {prevSignals.map(s => {
+                      const pl = pnl(s.buy_price, s.current_price)
+                      return (
+                        <tr key={s.ticker}>
+                          <td className="ticker-cell">{s.ticker}</td>
+                          <td className="rs-cell">{s.relative_strength?.toFixed(1)}</td>
+                          <td className="text-secondary">
+                            {s.buy_price != null ? `$${s.buy_price.toFixed(2)}` : '—'}
+                          </td>
+                          <td className="text-secondary">
+                            {s.current_price != null ? `$${s.current_price.toFixed(2)}` : '—'}
+                          </td>
+                          <td>
+                            {pl != null ? (
+                              <span className={pl >= 0 ? 'rs-cell' : 'loss-cell'}>
+                                {pl >= 0 ? '+' : ''}${((s.current_price - s.buy_price)).toFixed(2)}
+                                {' '}
+                                <span style={{ fontSize: '0.8em', opacity: 0.85 }}>
+                                  ({pl >= 0 ? '+' : ''}{(pl * 100).toFixed(2)}%)
+                                </span>
+                              </span>
+                            ) : '—'}
+                          </td>
+                          <td><WatchlistButton ticker={s.ticker} /></td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
 
-          {/* Table */}
-          <div className="px-2 pb-3">
-            <SignalTable signals={signals} sortSignals={sortSignals} />
-          </div>
-
-        </Card.Body>
-      </Card>
+        </div>
+      )}
 
     </div>
   )
