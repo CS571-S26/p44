@@ -23,7 +23,12 @@ export default function WatchlistButton({ ticker, onRemove }) {
   }
 
   return (
-    <button className="watchlist-btn" onClick={toggle}>
+    <button
+      className="watchlist-btn"
+      onClick={toggle}
+      aria-label={bookmarked ? `Remove ${ticker} from watchlist` : `Add ${ticker} to watchlist`}
+      aria-pressed={bookmarked}
+    >
       {bookmarked ? <FaBookmark className="watchlist-icon-active" /> : <FaRegBookmark className="watchlist-icon" />}
     </button>
   )

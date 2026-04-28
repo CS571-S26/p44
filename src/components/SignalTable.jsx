@@ -85,7 +85,7 @@ export default function SignalTable({ signals, sortSignals }) {
                   <th>Target</th>
                   <th>Current</th>
                   <th>P&amp;L</th>
-                  <th></th>
+                  <th scope="col"><span className="visually-hidden">Watchlist</span></th>
                 </tr>
               </thead>
               <tbody>
