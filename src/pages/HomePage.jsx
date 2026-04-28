@@ -16,7 +16,7 @@ function DashStatCard({ label, value, sub, highlight }) {
           {value ?? '...'}
         </div>
         {sub && (
-          <div className="mt-1" style={{ fontSize: '0.75rem', color: '#7a8a78' }}>
+          <div className="mt-1" style={{ fontSize: '0.75rem', color: '#5a6b58' }}>
             {sub}
           </div>
         )}
@@ -271,7 +271,7 @@ export default function HomePage() {
                     <tr>
                       <th>Ticker</th>
                       <th>RS</th>
-                      <th></th>
+                      <th scope="col"><span className="visually-hidden">Watchlist</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -311,7 +311,7 @@ export default function HomePage() {
                       <th>Buy Price</th>
                       <th>Current</th>
                       <th>P&amp;L</th>
-                      <th></th>
+                      <th scope="col"><span className="visually-hidden">Watchlist</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -332,7 +332,7 @@ export default function HomePage() {
                               <span className={pl >= 0 ? 'rs-cell' : 'loss-cell'}>
                                 {pl >= 0 ? '+' : ''}${((s.current_price - s.buy_price)).toFixed(2)}
                                 {' '}
-                                <span style={{ fontSize: '0.8em', opacity: 0.85 }}>
+                                <span style={{ fontSize: '0.8em', color: '#5a6b58' }}>
                                   ({pl >= 0 ? '+' : ''}{(pl * 100).toFixed(2)}%)
                                 </span>
                               </span>

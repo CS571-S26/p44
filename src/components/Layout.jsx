@@ -35,6 +35,7 @@ export default function Layout() {
   return (
     <div>
       <WelcomeModal />
+      <header>
       <nav className="navbar navbar-dark bg-dark main-nav">
         <Link to="/" className="navbar-brand fw-bold d-flex align-items-center gap-2">
           <img src="/p44/chart2.svg" alt="SwingTrade logo" style={{ width: '24px', height: '24px' }} />
@@ -67,7 +68,7 @@ export default function Layout() {
               ref={el => linkRefs.current[to] = el}
               className="nav-link"
               style={{
-                color: location.pathname === to ? 'white' : '#9ca3af',
+                color: location.pathname === to ? 'white' : '#6b7280',
                 transition: 'color 0.2s ease',
                 padding: '0.05rem 1rem',
                 position: 'relative',
@@ -86,6 +87,7 @@ export default function Layout() {
           <Link to="/about/" className="disclaimer-link">Learn more</Link>
         </div>
       )}
+      </header>
 
       <main className="p-4">
         <Outlet />
