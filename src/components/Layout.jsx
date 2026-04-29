@@ -68,7 +68,7 @@ export default function Layout() {
               ref={el => linkRefs.current[to] = el}
               className="nav-link"
               style={{
-                color: location.pathname === to ? 'white' : '#9db09b',
+                color: location.pathname === to ? 'white' : '#b8ccb6',
                 transition: 'color 0.2s ease',
                 padding: '0.05rem 1rem',
                 position: 'relative',
